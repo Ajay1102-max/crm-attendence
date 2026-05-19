@@ -10,6 +10,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth-utils'
 import { supabaseServer } from '@/lib/supabase-server'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // ─── IST helpers ─────────────────────────────────────────────────────────────
 
 function toIST(d: Date) {

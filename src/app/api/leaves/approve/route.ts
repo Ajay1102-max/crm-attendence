@@ -9,6 +9,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth-utils'
 import { supabaseServer } from '@/lib/supabase-server'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization')

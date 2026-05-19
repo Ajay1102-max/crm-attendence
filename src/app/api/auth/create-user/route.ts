@@ -7,6 +7,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 import { generateRandomPassword } from '@/lib/auth-utils'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function POST(req: NextRequest) {
   try {
     // Note: In production, you should verify the user is an admin

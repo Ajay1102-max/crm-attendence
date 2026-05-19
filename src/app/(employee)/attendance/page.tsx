@@ -70,14 +70,47 @@ export default function AttendancePage() {
     handleGetGPS()
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      // Enhanced camera constraints for better mobile support
+      const constraints = {
+        video: {
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints)
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play().catch(e => console.error('Play error:', e))
-        setCameraActive(true)
+        
+        // Better mobile playback handling
+        const playPromise = videoRef.current.play()
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              console.log('Camera started successfully')
+              setCameraActive(true)
+            })
+            .catch(e => {
+              console.error('Play error:', e)
+              setSubmitMsg({ type: 'error', text: 'Failed to start camera. Please try again.' })
+            })
+        } else {
+          setCameraActive(true)
+        }
       }
     } catch (err: any) {
-      setSubmitMsg({ type: 'error', text: 'Camera error: ' + err.message })
+      console.error('Camera error:', err)
+      let errorMsg = 'Camera access denied. Please enable camera permissions in your browser settings.'
+      if (err.name === 'NotAllowedError') {
+        errorMsg = 'Camera permission denied. Please allow camera access and try again.'
+      } else if (err.name === 'NotFoundError') {
+        errorMsg = 'No camera found on this device.'
+      } else if (err.name === 'NotReadableError') {
+        errorMsg = 'Camera is already in use by another app.'
+      }
+      setSubmitMsg({ type: 'error', text: errorMsg })
     }
   }
 
