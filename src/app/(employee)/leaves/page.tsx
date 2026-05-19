@@ -92,31 +92,31 @@ export default function LeavesPage() {
 
   return (
     <PageWrapper title="Leaves" subtitle="Apply and track your leave requests">
-      <div className="max-w-4xl space-y-5">
+      <div className="max-w-4xl px-4 sm:px-0 space-y-4 sm:space-y-5 pb-6">
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200">
+        <div className="flex border-b border-gray-200 overflow-x-auto">
           {(['leave', 'short'] as const).map(t => (
             <button key={t} onClick={() => { setTab(t); setSuccess(null); setError(null) }}
-              className={`px-5 py-3 text-sm font-medium border-b-2 transition ${tab === t ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              className={`px-4 sm:px-5 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap touch-manipulation ${tab === t ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
               {t === 'leave' ? 'Full / Half Day Leave' : 'Short Leave'}
             </button>
           ))}
         </div>
 
-        {success && <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">{success}</div>}
-        {error   && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
+        {success && <div className="p-3 sm:p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">{success}</div>}
+        {error   && <div className="p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
 
         {/* ── Full/Half Day Leave ── */}
         {tab === 'leave' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
             {/* Apply form */}
-            <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <h3 className="font-medium text-gray-900 mb-4">Apply for Leave</h3>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
+              <h3 className="font-medium text-gray-900 mb-4 text-base">Apply for Leave</h3>
               <form onSubmit={handleLeave(onLeaveSubmit)} className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Leave Type</label>
-                  <select {...regLeave('leaveType')} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black">
+                  <select {...regLeave('leaveType')} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black touch-manipulation">
                     <option value="annual">Annual Leave</option>
                     <option value="sick">Sick Leave</option>
                     <option value="personal">Personal Leave</option>
@@ -126,21 +126,21 @@ export default function LeavesPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Start Date</label>
-                  <input type="date" {...regLeave('startDate')} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black" />
+                  <input type="date" {...regLeave('startDate')} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black touch-manipulation" />
                   {leaveErrors.startDate && <p className="text-xs text-red-500 mt-1">{leaveErrors.startDate.message}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">End Date</label>
-                  <input type="date" {...regLeave('endDate')} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black" />
+                  <input type="date" {...regLeave('endDate')} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black touch-manipulation" />
                   {leaveErrors.endDate && <p className="text-xs text-red-500 mt-1">{leaveErrors.endDate.message}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Reason</label>
-                  <textarea {...regLeave('reason')} rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black resize-none" placeholder="Reason for leave..." />
+                  <textarea {...regLeave('reason')} rows={3} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black resize-none touch-manipulation" placeholder="Reason for leave..." />
                   {leaveErrors.reason && <p className="text-xs text-red-500 mt-1">{leaveErrors.reason.message}</p>}
                 </div>
                 <button type="submit" disabled={loading}
-                  className="w-full py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                  className="w-full py-3 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 touch-manipulation">
                   {loading ? 'Applying...' : 'Apply Leave'}
                 </button>
               </form>
@@ -148,29 +148,29 @@ export default function LeavesPage() {
 
             {/* Leave history */}
             <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-200">
-                <h3 className="font-medium text-gray-900">Leave History</h3>
+              <div className="px-4 sm:px-5 py-4 border-b border-gray-200">
+                <h3 className="font-medium text-gray-900 text-base">Leave History</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       {['Type','From','To','Days','Status','Sandwich'].map(h => (
-                        <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
+                        <th key={h} className="text-left px-3 sm:px-4 py-3 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {leaves.length === 0 ? (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">No leave requests yet</td></tr>
+                      <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400 text-sm">No leave requests yet</td></tr>
                     ) : leaves.map(l => (
                       <tr key={l.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 capitalize">{l.type || l.leave_type}</td>
-                        <td className="px-4 py-3">{l.start_date}</td>
-                        <td className="px-4 py-3">{l.end_date}</td>
-                        <td className="px-4 py-3">{l.total_days ?? '—'}</td>
-                        <td className="px-4 py-3"><span className={statusBadge(l.status)}>{l.status}</span></td>
-                        <td className="px-4 py-3 text-xs text-gray-500">
+                        <td className="px-3 sm:px-4 py-3 capitalize whitespace-nowrap">{l.type || l.leave_type}</td>
+                        <td className="px-3 sm:px-4 py-3 whitespace-nowrap">{l.start_date}</td>
+                        <td className="px-3 sm:px-4 py-3 whitespace-nowrap">{l.end_date}</td>
+                        <td className="px-3 sm:px-4 py-3">{l.total_days ?? '—'}</td>
+                        <td className="px-3 sm:px-4 py-3"><span className={statusBadge(l.status)}>{l.status}</span></td>
+                        <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                           {l.is_sandwich_applied ? `+${l.sandwich_days?.length ?? 0} days` : '—'}
                         </td>
                       </tr>
@@ -184,15 +184,15 @@ export default function LeavesPage() {
 
         {/* ── Short Leave ── */}
         {tab === 'short' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
             {/* Apply form */}
-            <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <h3 className="font-medium text-gray-900 mb-2">Apply Short Leave</h3>
+            <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
+              <h3 className="font-medium text-gray-900 mb-2 text-base">Apply Short Leave</h3>
               <p className="text-xs text-gray-500 mb-4">Max 2 hours. First 2/month = full attendance. Beyond 2 = 0.75 value.</p>
               <form onSubmit={handleShort(onShortLeaveSubmit)} className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
-                  <select {...regShort('type')} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black">
+                  <select {...regShort('type')} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black touch-manipulation">
                     <option value="morning">Morning (report by 11:05 AM)</option>
                     <option value="evening">Evening (leave after 4:00 PM)</option>
                   </select>
@@ -200,11 +200,11 @@ export default function LeavesPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Reason</label>
-                  <textarea {...regShort('reason')} rows={3} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black resize-none" placeholder="Reason..." />
+                  <textarea {...regShort('reason')} rows={3} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black resize-none touch-manipulation" placeholder="Reason..." />
                   {shortErrors.reason && <p className="text-xs text-red-500 mt-1">{shortErrors.reason.message}</p>}
                 </div>
                 <button type="submit" disabled={loading}
-                  className="w-full py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                  className="w-full py-3 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 touch-manipulation">
                   {loading ? 'Applying...' : 'Apply Short Leave'}
                 </button>
               </form>
@@ -218,28 +218,28 @@ export default function LeavesPage() {
 
             {/* Short leave history */}
             <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-200">
-                <h3 className="font-medium text-gray-900">Short Leave History</h3>
+              <div className="px-4 sm:px-5 py-4 border-b border-gray-200">
+                <h3 className="font-medium text-gray-900 text-base">Short Leave History</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       {['Date','Type','Reason','Att. Value','Status'].map(h => (
-                        <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
+                        <th key={h} className="text-left px-3 sm:px-4 py-3 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {shortLeaves.length === 0 ? (
-                      <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No short leave requests yet</td></tr>
+                      <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 text-sm">No short leave requests yet</td></tr>
                     ) : shortLeaves.map(sl => (
                       <tr key={sl.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3">{sl.date}</td>
-                        <td className="px-4 py-3 capitalize">{sl.type}</td>
-                        <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{sl.reason || '—'}</td>
-                        <td className="px-4 py-3">{sl.attendance_value}</td>
-                        <td className="px-4 py-3"><span className={statusBadge(sl.status)}>{sl.status}</span></td>
+                        <td className="px-3 sm:px-4 py-3 whitespace-nowrap">{sl.date}</td>
+                        <td className="px-3 sm:px-4 py-3 capitalize whitespace-nowrap">{sl.type}</td>
+                        <td className="px-3 sm:px-4 py-3 text-gray-600 max-w-xs truncate">{sl.reason || '—'}</td>
+                        <td className="px-3 sm:px-4 py-3">{sl.attendance_value}</td>
+                        <td className="px-3 sm:px-4 py-3"><span className={statusBadge(sl.status)}>{sl.status}</span></td>
                       </tr>
                     ))}
                   </tbody>

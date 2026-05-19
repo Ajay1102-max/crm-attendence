@@ -65,18 +65,18 @@ export default function CalendarPage() {
 
   return (
     <PageWrapper title="My Calendar" subtitle="Attendance overview by month">
-      <div className="max-w-3xl space-y-5">
+      <div className="max-w-3xl px-4 sm:px-0 space-y-4 sm:space-y-5 pb-6">
 
         {/* Month navigator */}
-        <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-3">
-          <button onClick={prev} className="p-1 hover:bg-gray-100 rounded-lg"><ChevronLeft size={20} /></button>
-          <h2 className="font-semibold text-gray-900">{MONTHS[month-1]} {year}</h2>
-          <button onClick={next} className="p-1 hover:bg-gray-100 rounded-lg"><ChevronRight size={20} /></button>
+        <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-4 sm:px-5 py-3">
+          <button onClick={prev} className="p-1.5 hover:bg-gray-100 rounded-lg touch-manipulation"><ChevronLeft size={20} /></button>
+          <h2 className="font-semibold text-gray-900 text-base sm:text-lg">{MONTHS[month-1]} {year}</h2>
+          <button onClick={next} className="p-1.5 hover:bg-gray-100 rounded-lg touch-manipulation"><ChevronRight size={20} /></button>
         </div>
 
         {/* Summary strip */}
         {s && (
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {[
               { label: 'Working Days', value: s.workingDays,         color: 'text-gray-700' },
               { label: 'Present',      value: s.presentDays,         color: 'text-green-700' },
@@ -86,7 +86,7 @@ export default function CalendarPage() {
               { label: 'Att. Value',   value: s.totalAttendanceValue.toFixed(1), color: 'text-blue-700' },
             ].map(item => (
               <div key={item.label} className="bg-white border border-gray-200 rounded-xl p-3 text-center">
-                <p className={`text-xl font-bold ${item.color}`}>{item.value}</p>
+                <p className={`text-lg sm:text-xl font-bold ${item.color}`}>{item.value}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{item.label}</p>
               </div>
             ))}
@@ -114,13 +114,13 @@ export default function CalendarPage() {
                   <button
                     key={cell.date}
                     onClick={() => setSelected(cell)}
-                    className={`aspect-square border-b border-r border-gray-100 flex flex-col items-center justify-center gap-0.5 hover:opacity-80 transition ${cell.dayType !== 'future' ? 'cursor-pointer' : 'cursor-default'}`}
+                    className={`aspect-square border-b border-r border-gray-100 flex flex-col items-center justify-center gap-0.5 hover:opacity-80 transition touch-manipulation ${cell.dayType !== 'future' ? 'cursor-pointer' : 'cursor-default'}`}
                   >
-                    <span className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-black text-white' : 'text-gray-800'}`}>
+                    <span className={`text-xs sm:text-sm font-medium w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-black text-white' : 'text-gray-800'}`}>
                       {cell.day}
                     </span>
                     {style.label && (
-                      <span className={`text-[9px] px-1 rounded font-medium ${style.bg} ${style.text} leading-tight`}>
+                      <span className={`text-[8px] sm:text-[9px] px-1 rounded font-medium ${style.bg} ${style.text} leading-tight`}>
                         {style.label}
                       </span>
                     )}
@@ -132,10 +132,10 @@ export default function CalendarPage() {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           {Object.entries(STATUS_STYLE).filter(([,v]) => v.label).map(([key, val]) => (
             <div key={key} className="flex items-center gap-1.5">
-              <div className={`w-3 h-3 rounded-sm ${val.bg}`} />
+              <div className={`w-3 h-3 rounded-sm flex-shrink-0 ${val.bg}`} />
               <span className="text-xs text-gray-500">{val.label}</span>
             </div>
           ))}
@@ -143,18 +143,18 @@ export default function CalendarPage() {
 
         {/* Day detail panel */}
         {selected && selected.dayType !== 'future' && (
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-gray-900">{selected.date}</h3>
-              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-lg leading-none">×</button>
+              <h3 className="font-semibold text-gray-900 text-base">{selected.date}</h3>
+              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none touch-manipulation w-8 h-8 flex items-center justify-center">×</button>
             </div>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-2">
                 <span className="text-gray-500">Status</span>
                 <span className="font-medium capitalize">{selected.label || selected.dayType.replace(/_/g,' ')}</span>
               </div>
               {selected.checkIn && (
-                <div className="flex justify-between">
+                <div className="flex justify-between gap-2">
                   <span className="text-gray-500">Check In</span>
                   <span className="font-medium">
                     {new Date((selected.checkIn.endsWith('Z') ? selected.checkIn : selected.checkIn + 'Z')).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true, timeZone:'Asia/Kolkata' })}
@@ -162,19 +162,19 @@ export default function CalendarPage() {
                 </div>
               )}
               {selected.checkOut && (
-                <div className="flex justify-between">
+                <div className="flex justify-between gap-2">
                   <span className="text-gray-500">Check Out</span>
                   <span className="font-medium">
                     {new Date((selected.checkOut.endsWith('Z') ? selected.checkOut : selected.checkOut + 'Z')).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true, timeZone:'Asia/Kolkata' })}
                   </span>
                 </div>
               )}
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-2">
                 <span className="text-gray-500">Attendance Value</span>
                 <span className="font-medium">{selected.attendanceValue}</span>
               </div>
               {selected.shortLeave && (
-                <div className="flex justify-between">
+                <div className="flex justify-between gap-2">
                   <span className="text-gray-500">Short Leave</span>
                   <span className="font-medium capitalize">{selected.shortLeave.type} — {selected.shortLeave.status}</span>
                 </div>
@@ -182,7 +182,7 @@ export default function CalendarPage() {
               {selected.selfieUrl && (
                 <div className="mt-3">
                   <p className="text-gray-500 mb-1">Selfie</p>
-                  <img src={selected.selfieUrl} alt="selfie" className="w-24 h-24 rounded-lg object-cover border border-gray-200" />
+                  <img src={selected.selfieUrl} alt="selfie" className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border border-gray-200" />
                 </div>
               )}
             </div>

@@ -16,6 +16,20 @@
   h1 { @apply text-2xl font-semibold text-grey-900; }
   h2 { @apply text-xl font-semibold text-grey-900; }
   h3 { @apply text-lg font-medium text-grey-800; }
+
+  /* Prevent zoom on input focus for iOS */
+  @supports (-webkit-touch-callout: none) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="date"],
+    input[type="time"],
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
 }
 
 @layer components {
@@ -124,5 +138,18 @@
 
   .stat-label {
     @apply text-sm text-grey-500;
+  }
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 640px) {
+  /* Improve touch targets */
+  button, a, input, select, textarea {
+    min-height: 44px;
+  }
+
+  /* Better spacing on mobile */
+  .space-y-5 > * + * {
+    margin-top: 1rem;
   }
 }

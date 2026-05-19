@@ -62,27 +62,27 @@ export default function EmployeeDashboard() {
       title={`Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, ${user?.name?.split(' ')[0]}`}
       subtitle={format(new Date(), 'EEEE, MMMM d, yyyy')}
     >
-      <div className="max-w-2xl space-y-5">
+      <div className="max-w-2xl px-4 sm:px-0 space-y-4 sm:space-y-5 pb-6">
 
         {/* Today's attendance card */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900">Today&apos;s Attendance</h2>
+            <h2 className="font-semibold text-gray-900 text-base sm:text-lg">Today&apos;s Attendance</h2>
             {checkedIn && !checkedOut && (
-              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">Checked In</span>
+              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium whitespace-nowrap">Checked In</span>
             )}
             {checkedIn && checkedOut && (
-              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium flex items-center gap-1">
-                <CheckCircle size={12} /> Complete
+              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium flex items-center gap-1 whitespace-nowrap">
+                <CheckCircle size={12} className="flex-shrink-0" /> Complete
               </span>
             )}
             {!checkedIn && (
-              <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full font-medium">Not marked</span>
+              <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full font-medium whitespace-nowrap">Not marked</span>
             )}
           </div>
 
           {todayAttendance ? (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
               <div>
                 <p className="text-xs text-gray-400 mb-1">Check In</p>
                 <p className="text-sm font-semibold text-gray-900">
@@ -97,17 +97,17 @@ export default function EmployeeDashboard() {
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-1">Status</p>
-                <p className="text-sm font-semibold text-gray-900 capitalize">
+                <p className="text-xs sm:text-sm font-semibold text-gray-900 capitalize break-words">
                   {todayAttendance.status?.replace(/_/g, ' ') || '—'}
                 </p>
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <p className="text-sm text-gray-500">You haven&apos;t marked attendance yet today.</p>
               <Link
                 href="/attendance"
-                className="flex items-center gap-1 text-sm font-medium text-black hover:underline"
+                className="flex items-center gap-1 text-sm font-medium text-black hover:underline whitespace-nowrap touch-manipulation"
               >
                 Mark now <ArrowRight size={14} />
               </Link>
@@ -116,12 +116,12 @@ export default function EmployeeDashboard() {
         </div>
 
         {/* Quick actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <Link
             href="/attendance"
-            className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition group"
+            className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 hover:shadow-md transition group touch-manipulation"
           >
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center mb-3 flex-shrink-0">
               <Clock size={20} className="text-blue-600" />
             </div>
             <p className="font-medium text-gray-900 text-sm">Mark Attendance</p>
@@ -130,9 +130,9 @@ export default function EmployeeDashboard() {
 
           <Link
             href="/leaves"
-            className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition group"
+            className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 hover:shadow-md transition group touch-manipulation"
           >
-            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center mb-3">
+            <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center mb-3 flex-shrink-0">
               <Calendar size={20} className="text-green-600" />
             </div>
             <p className="font-medium text-gray-900 text-sm">Apply Leave</p>
@@ -141,9 +141,9 @@ export default function EmployeeDashboard() {
 
           <Link
             href="/salary"
-            className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition group"
+            className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 hover:shadow-md transition group touch-manipulation"
           >
-            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center mb-3 flex-shrink-0">
               <DollarSign size={20} className="text-purple-600" />
             </div>
             <p className="font-medium text-gray-900 text-sm">My Salary</p>
@@ -152,18 +152,18 @@ export default function EmployeeDashboard() {
         </div>
 
         {/* Account settings */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <h2 className="font-semibold text-gray-900 mb-4">Account Settings</h2>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5">
+          <h2 className="font-semibold text-gray-900 mb-4 text-base sm:text-lg">Account Settings</h2>
           <button
             onClick={() => setShowPasswordModal(true)}
-            className="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+            className="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition touch-manipulation"
           >
-            <Lock size={18} className="text-gray-600" />
-            <div className="text-left">
+            <Lock size={18} className="text-gray-600 flex-shrink-0" />
+            <div className="text-left flex-1">
               <p className="text-sm font-medium text-gray-900">Change Password</p>
               <p className="text-xs text-gray-400">Update your login password</p>
             </div>
-            <ArrowRight size={16} className="text-gray-400 ml-auto" />
+            <ArrowRight size={16} className="text-gray-400 flex-shrink-0" />
           </button>
         </div>
 
