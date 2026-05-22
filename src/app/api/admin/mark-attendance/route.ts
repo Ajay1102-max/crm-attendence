@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -15,17 +15,8 @@ export const revalidate = 0
 export async function POST(req: NextRequest) {
   try {
     // Verify admin token
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const decoded = verifyToken(token)
-
-    if (!decoded || decoded.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+    const user = await requireAdmin(req)
+    const userId = user.userId
 
     const { employeeId, date, action, reason } = await req.json()
 
@@ -158,8 +149,9 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('[Admin Mark] Exception:', error)
+    const status = error.message?.includes('Forbidden') ? 403 : error.message?.includes('Unauthorized') ? 401 : 500
     return NextResponse.json({ 
       error: error.message || 'Internal server error' 
-    }, { status: 500 })
+    }, { status })
   }
 }

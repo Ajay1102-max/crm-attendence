@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -15,14 +15,8 @@ export const revalidate = 0
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded || decoded.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     const { leaveRequestId, status, remarks } = await req.json()
 
@@ -35,7 +29,7 @@ export async function POST(req: NextRequest) {
       .update({
         status,
         remarks:     remarks || null,
-        approved_by: decoded.userId,
+        approved_by: userId,
         approved_at: new Date().toISOString(),
       })
       .eq('id', leaveRequestId)

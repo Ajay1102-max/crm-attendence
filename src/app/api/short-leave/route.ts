@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -34,37 +34,42 @@ function currentMonthIST() {
 
 export async function GET(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     const { searchParams } = new URL(req.url)
     const all = searchParams.get('all') === 'true'
 
-    if (all && decoded.role !== 'admin') {
+    console.log('⏰ [Short Leave GET] User:', userId, 'All:', all)
+
+    if (all && user.role !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
+    // Use explicit foreign key relationship
     let query = supabaseServer
       .from('short_leaves')
-      .select('*, users(name, email)')
+      .select(`
+        *,
+        users!short_leaves_employee_id_fkey(name, email)
+      `)
       .order('created_at', { ascending: false })
 
     if (!all) {
-      query = query.eq('employee_id', decoded.userId)
+      query = query.eq('employee_id', userId)
     }
 
     const { data, error } = await query
     if (error) {
-      console.error('GET /api/short-leave error:', error)
+      console.error('❌ [Short Leave GET] Error:', error)
       return NextResponse.json({ error: 'Failed to fetch short leaves' }, { status: 500 })
     }
 
+    console.log('✅ [Short Leave GET] Found:', data?.length || 0)
+
     return NextResponse.json({ shortLeaves: data || [] })
   } catch (err) {
+    console.error('❌ [Short Leave GET] Exception:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -73,12 +78,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     const { type, reason } = await req.json()
 
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
     const { count: monthlyCount } = await supabaseServer
       .from('short_leaves')
       .select('*', { count: 'exact', head: true })
-      .eq('employee_id', decoded.userId)
+      .eq('employee_id', userId)
       .gte('date', `${monthPrefix}-01`)
       .lte('date', `${monthPrefix}-31`)
       .in('status', ['approved', 'pending'])
@@ -121,7 +122,7 @@ export async function POST(req: NextRequest) {
     const { data: existing } = await supabaseServer
       .from('short_leaves')
       .select('id')
-      .eq('employee_id', decoded.userId)
+      .eq('employee_id', userId)
       .eq('date', today)
       .maybeSingle()
 
@@ -139,13 +140,13 @@ export async function POST(req: NextRequest) {
     const { data: shortLeave, error } = await supabaseServer
       .from('short_leaves')
       .insert({
-        employee_id:      decoded.userId,
+        employee_id:      userId,
         date:             today,
-        type,
+        short_leave_type: type, // ✅ Fixed: column name is short_leave_type
         reason:           reason || '',
         status:           'pending',
-        monthly_count:    usedCount + 1,
-        attendance_value: attendanceValue,
+        // Note: monthly_count and attendance_value columns don't exist in schema
+        // These are calculated values, not stored
       })
       .select()
       .single()

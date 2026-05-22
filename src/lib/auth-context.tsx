@@ -12,7 +12,7 @@ import type { User } from '@/lib/supabase/client'
 interface AuthContextType {
   user: User | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<User>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
 }
@@ -23,16 +23,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const syncLegacySession = (profile: User, accessToken?: string | null) => {
+    if (typeof window === 'undefined') return
+
+    localStorage.setItem('user', JSON.stringify(profile))
+    if (accessToken) {
+      localStorage.setItem('authToken', accessToken)
+    }
+  }
+
+  const clearLegacySession = () => {
+    if (typeof window === 'undefined') return
+
+    localStorage.removeItem('user')
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('supabase_session')
+  }
+
   // Initialize from Supabase session
   useEffect(() => {
     loadUser()
 
     // Listen to auth state changes
     const { data: { subscription } } = onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') && session) {
         loadUser()
       } else if (event === 'SIGNED_OUT') {
         setUser(null)
+        clearLegacySession()
       }
     })
 
@@ -46,19 +64,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const result = await getCurrentUser()
       if (result.success && result.profile) {
-        setUser(result.profile as User)
+        const profile = result.profile as User
+        setUser(profile)
+        syncLegacySession(profile, result.session?.access_token)
       } else {
         setUser(null)
+        clearLegacySession()
       }
     } catch (err) {
       console.error('Failed to load user:', err)
       setUser(null)
+      clearLegacySession()
     } finally {
       setIsLoading(false)
     }
   }
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     const result = await signIn(email, password)
 
     if (!result.success) {
@@ -66,13 +88,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (result.profile) {
-      setUser(result.profile as User)
+      const profile = result.profile as User
+      setUser(profile)
+      syncLegacySession(profile, result.session?.access_token)
+      return profile
     }
+
+    throw new Error('User profile not found')
   }
 
   const logout = async () => {
     await signOut()
     setUser(null)
+    clearLegacySession()
   }
 
   const refreshUser = async () => {

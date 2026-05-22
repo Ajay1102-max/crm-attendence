@@ -25,12 +25,8 @@ export default function LoginPage() {
 
     try {
       // Use AuthProvider's login() so context state is updated immediately
-      await login(email, password)
-
-      // Get user from session storage
-      const sessionStr = localStorage.getItem('supabase_session')
-      const session = sessionStr ? JSON.parse(sessionStr) : null
-      const userRole = session?.profile?.role
+      const profile = await login(email, password)
+      const userRole = profile.role
 
       console.log('Login successful, role:', userRole)
 

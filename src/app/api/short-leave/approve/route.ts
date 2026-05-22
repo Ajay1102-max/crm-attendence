@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -16,14 +16,8 @@ export const revalidate = 0
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded || decoded.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     const { shortLeaveId, status } = await req.json()
 
@@ -50,7 +44,7 @@ export async function POST(req: NextRequest) {
       .from('short_leaves')
       .update({
         status,
-        approved_by: decoded.userId,
+        approved_by: userId,
         approved_at: new Date().toISOString(),
       })
       .eq('id', shortLeaveId)
@@ -63,7 +57,20 @@ export async function POST(req: NextRequest) {
 
     // If approved, update the attendance record for that day
     if (status === 'approved') {
-      const attendanceValue = Number(sl.attendance_value) || 1
+      // Calculate attendance value based on monthly count
+      // First 2 short leaves = 1.0, beyond that = 0.75
+      const monthPrefix = sl.date.substring(0, 7) // YYYY-MM
+      
+      const { count: monthlyCount } = await supabaseServer
+        .from('short_leaves')
+        .select('*', { count: 'exact', head: true })
+        .eq('employee_id', sl.employee_id)
+        .gte('date', `${monthPrefix}-01`)
+        .lte('date', `${monthPrefix}-31`)
+        .eq('status', 'approved')
+
+      const usedCount = (monthlyCount ?? 0)
+      const attendanceValue = usedCount <= 2 ? 1.0 : 0.75
 
       const { data: att } = await supabaseServer
         .from('attendance')

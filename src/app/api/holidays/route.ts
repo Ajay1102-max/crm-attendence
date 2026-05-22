@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -30,14 +30,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded || decoded.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     const { date, name } = await req.json()
     if (!date || !name) {
@@ -61,14 +55,8 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded || decoded.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')

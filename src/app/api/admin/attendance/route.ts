@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer as supabase } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -23,15 +23,8 @@ function todayIST(): string {
 
 export async function GET(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded || decoded.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+    // Verify admin authentication
+    await requireAdmin(req)
 
     const today = todayIST()
     
@@ -73,8 +66,9 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ records: records || [] })
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Admin Attendance] Exception:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const status = error.message?.includes('Forbidden') ? 403 : error.message?.includes('Unauthorized') ? 401 : 500
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status })
   }
 }

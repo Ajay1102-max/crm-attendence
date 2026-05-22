@@ -1,11 +1,11 @@
 /**
  * POST /api/auth/change-password
- * Change user password (plain text only)
+ * Change user password with plain text storage
+ * Updates both Supabase Auth and users.password_hash
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
-import { verifyToken } from '@/lib/auth-utils'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -13,68 +13,92 @@ export const revalidate = 0
 
 export async function POST(req: NextRequest) {
   try {
-    // Validate JWT token
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const decoded = verifyToken(token)
-
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
-
-    // Validate input
     const { oldPassword, newPassword } = await req.json()
-    const userId = decoded.userId
 
-    if (!userId || !oldPassword || !newPassword) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    console.log('🔐 Change password request received')
+
+    if (!oldPassword || !newPassword) {
+      return NextResponse.json({ error: 'Old password and new password are required' }, { status: 400 })
     }
 
     if (newPassword.length < 6) {
       return NextResponse.json({ error: 'New password must be at least 6 characters' }, { status: 400 })
     }
 
-    // Get user from database
-    const { data: user, error: userError } = await supabaseServer
-      .from('users')
-      .select('id, email, password_hash')
-      .eq('id', userId)
-      .single()
+    // Get authorization header
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.log('❌ No Bearer token found')
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const accessToken = authHeader.substring(7)
+
+    // Verify user with Supabase Auth using service role
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser(accessToken)
 
     if (userError || !user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      console.log('❌ Invalid token:', userError?.message)
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    if (!user.password_hash) {
-      return NextResponse.json({ error: 'No password set for this user' }, { status: 400 })
+    console.log('✅ User verified:', user.id)
+
+    // Get user profile to verify old password (plain text comparison)
+    const { data: profile, error: profileError } = await supabaseServer
+      .from('users')
+      .select('password_hash, email')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile) {
+      console.error('❌ Profile fetch error:', profileError)
+      return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
     }
 
-    // Verify old password (plain text only)
-    if (user.password_hash !== oldPassword) {
+    console.log('✅ Profile fetched for:', profile.email)
+
+    // Verify old password using plain text comparison
+    if (profile.password_hash !== oldPassword) {
+      console.log('❌ Old password mismatch')
       return NextResponse.json({ error: 'Current password is incorrect' }, { status: 401 })
     }
 
-    // Update password in database (plain text)
-    const { error: updateError } = await supabaseServer
-      .from('users')
-      .update({ password_hash: newPassword })
-      .eq('id', userId)
+    console.log('✅ Old password verified')
+
+    // Update password in Supabase Auth using admin API
+    const { error: updateError } = await supabaseServer.auth.admin.updateUserById(
+      user.id,
+      { password: newPassword }
+    )
 
     if (updateError) {
-      console.error('Password update error:', updateError)
-      return NextResponse.json({ error: 'Failed to update password' }, { status: 500 })
+      console.error('❌ Password update error:', updateError)
+      return NextResponse.json({ error: 'Failed to update password in auth system' }, { status: 500 })
     }
+
+    console.log('✅ Password updated in Supabase Auth')
+
+    // Update plain text password in users table
+    const { error: dbUpdateError } = await supabaseServer
+      .from('users')
+      .update({ password_hash: newPassword })
+      .eq('id', user.id)
+
+    if (dbUpdateError) {
+      console.error('❌ Database password update error:', dbUpdateError)
+      return NextResponse.json({ error: 'Failed to sync password in database' }, { status: 500 })
+    }
+
+    console.log('✅ Password updated in users table')
+    console.log('✅ Password changed successfully for user:', user.id)
 
     return NextResponse.json({
       success: true,
       message: 'Password changed successfully',
     })
   } catch (error) {
-    console.error('Change password error:', error)
+    console.error('❌ Change password error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

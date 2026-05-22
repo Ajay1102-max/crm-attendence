@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -13,18 +13,9 @@ export const revalidate = 0
 
 export async function POST(req: NextRequest) {
   try {
-    // Verify JWT token
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const decoded = verifyToken(token)
-
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    // Verify authentication
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     // Get markout data (GPS + selfie)
     const body = await req.json()
@@ -40,13 +31,13 @@ export async function POST(req: NextRequest) {
     const day = String(istDate.getUTCDate()).padStart(2, '0')
     const dateStr = `${year}-${month}-${day}`
 
-    console.log('[Markout] Employee:', decoded.userId, 'Date:', dateStr)
+    console.log('[Markout] Employee:', userId, 'Date:', dateStr)
 
     // Find today's attendance record
     const { data: existing, error: findError } = await supabaseServer
       .from('attendance')
       .select('id, check_in, check_out, gps_data, attendance_value')
-      .eq('employee_id', decoded.userId)
+      .eq('employee_id', userId)
       .eq('date', dateStr)
       .maybeSingle()
 

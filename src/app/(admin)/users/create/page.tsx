@@ -9,9 +9,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, Copy, Check } from 'lucide-react'
 import { PageWrapper } from '@/components/layout/PageWrapper'
+import { useAuth } from '@/lib/auth-context'
 
 export default function CreateUserPage() {
   const router = useRouter()
+  const { user, isLoading } = useAuth()
   const [token, setToken] = useState('')
   const [userRole, setUserRole] = useState('')
   const [loading, setLoading] = useState(true)
@@ -37,29 +39,22 @@ export default function CreateUserPage() {
 
   // Check authentication
   useEffect(() => {
-    const sessionStr = localStorage.getItem('supabase_session')
-    
-    if (!sessionStr) {
+    if (isLoading) return
+
+    if (!user) {
       router.push('/login')
       return
     }
 
-    try {
-      const session = JSON.parse(sessionStr)
-      const userData = session?.profile
-
-      if (!userData || userData.role !== 'admin') {
-        router.push('/home')
-        return
-      }
-
-      setUserRole(userData.role)
-      setLoading(false)
-    } catch (error) {
-      console.error('Session parse error:', error)
-      router.push('/login')
+    if (user.role !== 'admin') {
+      router.push('/home')
+      return
     }
-  }, [router])
+
+    setToken(localStorage.getItem('authToken') || '')
+    setUserRole(user.role)
+    setLoading(false)
+  }, [user, isLoading, router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target

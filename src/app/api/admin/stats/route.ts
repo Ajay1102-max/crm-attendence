@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -21,28 +21,9 @@ function todayIST(): string {
 
 export async function GET(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    console.log('🔐 [Admin Stats] Auth header:', authHeader ? 'Present' : 'Missing')
-    
-    if (!authHeader?.startsWith('Bearer ')) {
-      console.log('❌ [Admin Stats] No Bearer token')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    
-    const token = authHeader.substring(7)
-    console.log('🔑 [Admin Stats] Token received, length:', token.length)
-    console.log('🔑 [Admin Stats] Token preview:', token.substring(0, 20) + '...')
-    
-    const decoded = verifyToken(token)
-    console.log('🔓 [Admin Stats] Token decoded:', decoded ? 'Yes' : 'No')
-    if (decoded) {
-      console.log('👤 [Admin Stats] User:', decoded.userId, 'Role:', decoded.role)
-    }
-    
-    if (!decoded || decoded.role !== 'admin') {
-      console.log('❌ [Admin Stats] Admin access denied. Decoded:', decoded)
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+    // Verify admin authentication
+    const user = await requireAdmin(req)
+    console.log('✅ [Admin Stats] Authenticated as admin:', user.email)
 
     const today = todayIST()
     
@@ -64,15 +45,14 @@ export async function GET(req: NextRequest) {
         // Count anyone who checked in today (any status except absent)
 
       supabaseServer
-        .from('leaves')
+        .from('leave_requests')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending'),
 
       supabaseServer
-        .from('leaves')
+        .from('short_leaves')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
-        .eq('leave_type', 'short_leave'),
+        .eq('status', 'pending'),
     ])
 
     const totalEmployees    = empRes.count          ?? 0

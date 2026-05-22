@@ -1,38 +1,26 @@
-/**
- * Root page — redirects to login or dashboard based on JWT token
- */
 'use client'
 
-import { redirect } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useAuth } from '@/lib/auth-context'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 
 export default function RootPage() {
-  const [isClient, setIsClient] = useState(false)
+  const { user, isLoading } = useAuth()
+  const router = useRouter()
 
   useEffect(() => {
-    setIsClient(true)
-    const token = localStorage.getItem('authToken')
-    const user = localStorage.getItem('user')
+    if (isLoading) return
 
-    if (!token || !user) {
-      redirect('/login')
+    if (!user) {
+      router.replace('/login')
+    } else if (user.role === 'admin') {
+      router.replace('/dashboard')
+    } else {
+      router.replace('/home')
     }
+  }, [user, isLoading, router])
 
-    try {
-      const userData = JSON.parse(user)
-      const role = userData.role
-
-      if (role === 'admin') {
-        redirect('/dashboard')
-      } else {
-        redirect('/home')
-      }
-    } catch (error) {
-      redirect('/login')
-    }
-  }, [])
-
-  if (!isClient) {
+  if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 

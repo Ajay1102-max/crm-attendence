@@ -9,7 +9,7 @@ import { z } from 'zod'
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const leaveSchema = z.object({
-  leaveType: z.enum(['annual', 'sick', 'personal', 'monthly']),
+  leaveType: z.enum(['full_day', 'half_day', 'sick', 'casual', 'earned', 'personal']),
   startDate: z.string().min(1, 'Start date required'),
   endDate:   z.string().min(1, 'End date required'),
   reason:    z.string().min(5, 'Please provide a reason (min 5 characters)'),
@@ -117,10 +117,12 @@ export default function LeavesPage() {
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Leave Type</label>
                   <select {...regLeave('leaveType')} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-black touch-manipulation">
-                    <option value="annual">Annual Leave</option>
+                    <option value="full_day">Full Day Leave</option>
+                    <option value="half_day">Half Day Leave</option>
                     <option value="sick">Sick Leave</option>
+                    <option value="casual">Casual Leave</option>
+                    <option value="earned">Earned Leave</option>
                     <option value="personal">Personal Leave</option>
-                    <option value="monthly">Monthly Leave (Intern/Probation)</option>
                   </select>
                   {leaveErrors.leaveType && <p className="text-xs text-red-500 mt-1">{leaveErrors.leaveType.message}</p>}
                 </div>

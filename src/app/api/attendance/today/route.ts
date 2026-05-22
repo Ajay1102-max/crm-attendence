@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -21,27 +21,20 @@ function todayIST(): string {
 
 export async function GET(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     const today = todayIST()
     
     console.log('[Attendance Today] ===== START =====')
-    console.log('[Attendance Today] Employee ID:', decoded.userId)
+    console.log('[Attendance Today] Employee ID:', userId)
     console.log('[Attendance Today] Today date:', today)
 
     // Direct query - simple and reliable
     const { data: attendance, error } = await supabaseServer
       .from('attendance')
       .select('*')
-      .eq('employee_id', decoded.userId)
+      .eq('employee_id', userId)
       .eq('date', today)
       .maybeSingle()
 

@@ -1,27 +1,40 @@
 /**
  * POST /api/auth/create-user
- * Admin endpoint to create new users
+ * Admin endpoint to create new users using Supabase Auth with plain text passwords
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
-import { generateRandomPassword } from '@/lib/auth-utils'
+import { requireAdmin } from '@/lib/supabase-auth-helper'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
+/**
+ * Generate random password
+ */
+function generateRandomPassword(length: number = 12): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+  let password = ''
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return password
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // Note: In production, you should verify the user is an admin
-    // For now, we rely on RLS policies
+    await requireAdmin(req)
 
-    const { email, name, category, monthly_salary, joining_date } = await req.json()
+    const body = await req.json()
+    const { email, name, category, monthly_salary, monthlySalary, joining_date, joiningDate } = body
 
     if (!email || !name) {
       return NextResponse.json({ error: 'Email and name are required' }, { status: 400 })
     }
 
+    // Check if user already exists in users table
     const { data: existingUser } = await supabaseServer
       .from('users')
       .select('id')
@@ -32,27 +45,52 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 })
     }
 
+    // Generate temporary password (plain text)
     const tempPassword = generateRandomPassword()
-    // Store plain text password initially - will be hashed on first login
+
+    // Create user in Supabase Auth with plain password
+    const { data: authData, error: authError } = await supabaseServer.auth.admin.createUser({
+      email: email.toLowerCase(),
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: {
+        name: name,
+        plain_password: tempPassword // Store for reference
+      },
+    })
+
+    if (authError || !authData.user) {
+      console.error('Create auth user error:', authError)
+      return NextResponse.json({ error: 'Failed to create user account' }, { status: 500 })
+    }
+
+    console.log('✅ Auth user created:', authData.user.id)
+
+    // Create user profile in users table with plain password
     const { data: newUser, error: createError } = await supabaseServer
       .from('users')
       .insert({
+        id: authData.user.id,
         email: email.toLowerCase(),
         name,
         role: 'employee',
         category: category || 'regular',
-        monthly_salary: monthly_salary || 0,
-        joining_date: joining_date || new Date().toISOString().split('T')[0],
-        password_hash: tempPassword,  // Store plain text, will hash on first login
+        monthly_salary: monthly_salary || monthlySalary || 0,
+        joining_date: joining_date || joiningDate || new Date().toISOString().split('T')[0],
+        password_hash: tempPassword, // Store as plain text
         is_active: true,
       })
       .select()
       .single()
 
     if (createError) {
-      console.error('Create user error:', createError)
-      return NextResponse.json({ error: 'Failed to create user' }, { status: 500 })
+      console.error('Create user profile error:', createError)
+      // Rollback: delete auth user
+      await supabaseServer.auth.admin.deleteUser(authData.user.id)
+      return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 })
     }
+
+    console.log('✅ User profile created:', newUser.id)
 
     return NextResponse.json({
       success: true,

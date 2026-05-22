@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -35,12 +35,9 @@ function isThirdSaturday(date: Date): boolean {
 
 export async function GET(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    // Verify authentication
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     const { searchParams } = new URL(req.url)
     const month = parseInt(searchParams.get('month') || '0')
@@ -48,9 +45,9 @@ export async function GET(req: NextRequest) {
     const reqEmployeeId = searchParams.get('employeeId')
 
     // Employees can only see their own; admins can see anyone
-    const employeeId = decoded.role === 'admin'
-      ? (reqEmployeeId || decoded.userId)
-      : decoded.userId
+    const employeeId = user.role === 'admin'
+      ? (reqEmployeeId || userId)
+      : userId
 
     if (!month || !year) {
       return NextResponse.json({ error: 'month and year required' }, { status: 400 })

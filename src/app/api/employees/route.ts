@@ -4,7 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken, generateRandomPassword } from '@/lib/auth-utils'
+import { requireAdmin } from '@/lib/supabase-auth-helper'
+import { generateRandomPassword } from '@/lib/auth-utils'
 import { supabaseServer } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -13,15 +14,8 @@ export const revalidate = 0
 
 export async function GET(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded || decoded.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+    // Verify admin authentication
+    await requireAdmin(req)
 
     const { data: employees, error } = await supabaseServer
       .from('users')
@@ -35,22 +29,16 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ employees: employees || [] })
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  } catch (error: any) {
+    const status = error.message?.includes('Forbidden') ? 403 : 401
+    return NextResponse.json({ error: error.message || 'Unauthorized' }, { status })
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded || decoded.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+    // Verify admin authentication
+    const user = await requireAdmin(req)
 
     const body = await req.json()
     const { name, email, category, monthlySalary, joiningDate } = body
@@ -72,9 +60,22 @@ export async function POST(req: NextRequest) {
 
     const tempPassword = generateRandomPassword()
 
+    const { data: authData, error: authError } = await supabaseServer.auth.admin.createUser({
+      email: email.toLowerCase(),
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { name },
+    })
+
+    if (authError || !authData.user) {
+      console.error('Error creating employee auth user:', authError)
+      return NextResponse.json({ error: 'Failed to create employee auth account' }, { status: 500 })
+    }
+
     const { data: employee, error } = await supabaseServer
       .from('users')
       .insert({
+        id:             authData.user.id,
         name,
         email:          email.toLowerCase(),
         role:           'employee',
@@ -89,6 +90,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('Error creating employee:', error)
+      await supabaseServer.auth.admin.deleteUser(authData.user.id)
       return NextResponse.json({ error: 'Failed to create employee', details: error.message }, { status: 500 })
     }
 

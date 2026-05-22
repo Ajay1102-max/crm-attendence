@@ -1,11 +1,11 @@
 /**
  * POST /api/auth/login
- * Email/password authentication (plain text only)
+ * Email/password authentication with plain text password verification
+ * Uses Supabase Auth for session management only
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
-import { generateToken } from '@/lib/auth-utils'
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
@@ -21,57 +21,53 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 })
     }
 
-    const { data: user, error: userError } = await supabaseServer
+    // Get user profile from users table
+    const { data: profile, error: profileError } = await supabaseServer
       .from('users')
       .select('*')
       .eq('email', email.toLowerCase())
-      .maybeSingle()
+      .single()
 
-    console.log('👤 User found:', user ? 'Yes' : 'No')
-
-    if (userError || !user) {
+    if (profileError || !profile) {
+      console.log('❌ User not found')
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
     }
 
-    if (!user.is_active) {
+    // Verify plain text password
+    if (profile.password_hash !== password) {
+      console.log('❌ Password mismatch')
+      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
+    }
+
+    if (!profile.is_active) {
       console.log('❌ User inactive')
       return NextResponse.json({ error: 'User account is inactive' }, { status: 403 })
     }
 
-    if (!user.password_hash) {
-      console.log('❌ No password')
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
-    }
+    console.log('✅ Password verified, signing in with Supabase Auth')
 
-    // Plain text password comparison only
-    const passwordValid = user.password_hash === password
-
-    console.log('✅ Password valid:', passwordValid)
-    console.log('📝 Stored password:', user.password_hash)
-    console.log('📝 Provided password:', password)
-    console.log('📝 Password format check:', {
-      hasColon: user.password_hash?.includes(':'),
-      length: user.password_hash?.length,
-      isPlainText: user.password_hash?.length < 50 && !user.password_hash?.includes(':')
+    // Sign in with Supabase Auth using the plain text password
+    const { data: authData, error: authError } = await supabaseServer.auth.signInWithPassword({
+      email: email.toLowerCase(),
+      password: password,
     })
 
-    if (!passwordValid) {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
+    if (authError || !authData.user) {
+      console.log('❌ Auth error:', authError?.message)
+      return NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
     }
 
-    console.log('🔑 Generating JWT token for user:', user.id, 'role:', user.role)
-    const token = generateToken(user.id, user.email, user.role)
-    console.log('🔑 Token generated:', token ? 'Yes' : 'No', 'Length:', token?.length)
+    console.log('✅ Login successful for:', profile.email, 'role:', profile.role)
 
     return NextResponse.json({
       success: true,
-      token,
+      session: authData.session,
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        category: user.category,
+        id: profile.id,
+        email: profile.email,
+        name: profile.name,
+        role: profile.role,
+        category: profile.category,
       },
     })
   } catch (error) {

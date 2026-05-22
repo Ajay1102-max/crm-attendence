@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 import * as XLSX from 'xlsx'
 
@@ -14,15 +14,8 @@ export const revalidate = 0
 
 export async function GET(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded || decoded.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     const { searchParams } = new URL(req.url)
     const month = parseInt(searchParams.get('month') || '0')
@@ -73,23 +66,17 @@ export async function GET(req: NextRequest) {
         'Content-Disposition': `attachment; filename="attendance-${year}-${String(month).padStart(2, '0')}.xlsx"`,
       },
     })
-  } catch (error) {
-    console.error('GET /api/export/attendance error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+  } catch (error: any) {
+      console.error(error)
+      const status = error.message?.includes('Forbidden') ? 403 : error.message?.includes('Unauthorized') ? 401 : 500
+      return NextResponse.json({ error: error.message || 'Internal server error' }, { status })
+    }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded || decoded.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     const { startDate, endDate } = await req.json()
 
@@ -109,8 +96,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, records, count: records?.length || 0 })
-  } catch (error) {
-    console.error('POST /api/export/attendance error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+  } catch (error: any) {
+      console.error(error)
+      const status = error.message?.includes('Forbidden') ? 403 : error.message?.includes('Unauthorized') ? 401 : 500
+      return NextResponse.json({ error: error.message || 'Internal server error' }, { status })
+    }
 }

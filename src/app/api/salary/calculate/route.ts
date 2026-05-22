@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 
 // Force dynamic rendering
@@ -47,20 +47,16 @@ function countWorkingDays(year: number, month: number, holidayDates: string[]): 
 export async function POST(req: NextRequest) {
   try {
     // Auth
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const decoded = verifyToken(authHeader.substring(7))
-    if (!decoded) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     const body = await req.json()
     const { month, year } = body
 
     // Admins can calculate for any employee; employees only see their own
-    const employeeId = decoded.role === 'admin'
-      ? (body.employeeId || decoded.userId)
-      : decoded.userId
+    const employeeId = user.role === 'admin'
+      ? (body.employeeId || userId)
+      : userId
 
     if (!month || !year) {
       return NextResponse.json({ error: 'month and year are required' }, { status: 400 })

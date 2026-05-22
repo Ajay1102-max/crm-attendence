@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth-utils'
+import { requireAuth, requireAdmin } from '@/lib/supabase-auth-helper'
 import { supabaseServer } from '@/lib/supabase-server'
 import { checkAttendanceAllowed, getTodayIST } from '@/lib/date-utils'
 
@@ -14,18 +14,9 @@ export const revalidate = 0
 
 export async function POST(req: NextRequest) {
   try {
-    // Validate JWT token
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.substring(7)
-    const decoded = verifyToken(token)
-
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
+    // Validate authentication
+    const user = await requireAuth(req)
+    const userId = user.userId
 
     // Validate input
     const { latitude, longitude, accuracy, selfieURL, address } = await req.json()
@@ -93,7 +84,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 })
     }
 
-    console.log('Marking attendance for user:', decoded.userId)
+    console.log('Marking attendance for user:', userId)
 
     // Check if attendance is allowed today (holidays/weekends)
     const today = getTodayIST()
@@ -149,7 +140,7 @@ export async function POST(req: NextRequest) {
     const { data: existing } = await supabaseServer
       .from('attendance')
       .select('id')
-      .eq('employee_id', decoded.userId)
+      .eq('employee_id', userId)
       .eq('date', dateStr)
       .maybeSingle()
 
@@ -180,7 +171,7 @@ export async function POST(req: NextRequest) {
 
     // Insert attendance record directly
     console.log('Attempting to insert attendance:', {
-      employee_id: decoded.userId,
+      employee_id: userId,
       date: dateStr,
       status,
       attendance_value: attendanceValue,
@@ -189,7 +180,7 @@ export async function POST(req: NextRequest) {
     const { data: attendance, error: insertError } = await supabaseServer
       .from('attendance')
       .insert({
-        employee_id: decoded.userId,
+        employee_id: userId,
         date: dateStr,
         check_in: now.toISOString(),
         status,
@@ -221,7 +212,7 @@ export async function POST(req: NextRequest) {
         error: insertError.message || 'Failed to mark attendance',
         details: insertError,
         debug: {
-          employee_id: decoded.userId,
+          employee_id: userId,
           date: dateStr,
           using_service_role: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
         }
@@ -240,8 +231,9 @@ export async function POST(req: NextRequest) {
         is_late: isLate,
       },
     })
-  } catch (error) {
-    console.error('Mark attendance error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+  } catch (error: any) {
+      console.error(error)
+      const status = error.message?.includes('Forbidden') ? 403 : error.message?.includes('Unauthorized') ? 401 : 500
+      return NextResponse.json({ error: error.message || 'Internal server error' }, { status })
+    }
 }
