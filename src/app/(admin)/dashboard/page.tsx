@@ -67,14 +67,31 @@ export default function AdminDashboard() {
   const token = () => localStorage.getItem('authToken')
 
   const fetchAll = async () => {
+    const authToken = token()
+    
+    if (!authToken) {
+      console.error('No auth token found, redirecting to login')
+      window.location.href = '/login'
+      return
+    }
+
     setLoading(true)
     try {
       const [statsRes, attendanceRes, leavesRes, shortLeavesRes] = await Promise.all([
-        fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token()}` } }),
-        fetch('/api/admin/attendance', { headers: { Authorization: `Bearer ${token()}` } }),
-        fetch('/api/admin/leaves', { headers: { Authorization: `Bearer ${token()}` } }),
-        fetch('/api/short-leave?all=true', { headers: { Authorization: `Bearer ${token()}` } }),
+        fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${authToken}` } }),
+        fetch('/api/admin/attendance', { headers: { Authorization: `Bearer ${authToken}` } }),
+        fetch('/api/admin/leaves', { headers: { Authorization: `Bearer ${authToken}` } }),
+        fetch('/api/short-leave?all=true', { headers: { Authorization: `Bearer ${authToken}` } }),
       ])
+
+      // Check for 401 Unauthorized - token expired or invalid
+      if (statsRes.status === 401 || attendanceRes.status === 401 || leavesRes.status === 401 || shortLeavesRes.status === 401) {
+        console.error('Unauthorized - token invalid or expired, redirecting to login')
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+        return
+      }
 
       if (statsRes.ok) setStats(await statsRes.json())
       if (attendanceRes.ok) {
@@ -99,16 +116,30 @@ export default function AdminDashboard() {
   useEffect(() => { fetchAll() }, [])
 
   const handleLeaveAction = async (leaveId: string, status: 'approved' | 'rejected') => {
+    const authToken = token()
+    if (!authToken) {
+      window.location.href = '/login'
+      return
+    }
+
     setApprovingId(leaveId)
     try {
       const res = await fetch('/api/leaves/approve', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({ leaveRequestId: leaveId, status }),
       })
+      
+      if (res.status === 401) {
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+        return
+      }
+
       if (res.ok) {
         setLeaves((prev) => prev.map((l) => (l.id === leaveId ? { ...l, status } : l)))
-        const statsRes = await fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token()}` } })
+        const statsRes = await fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${authToken}` } })
         if (statsRes.ok) setStats(await statsRes.json())
       }
     } finally {
@@ -117,16 +148,30 @@ export default function AdminDashboard() {
   }
 
   const handleShortLeaveAction = async (shortLeaveId: string, status: 'approved' | 'rejected') => {
+    const authToken = token()
+    if (!authToken) {
+      window.location.href = '/login'
+      return
+    }
+
     setApprovingId(shortLeaveId)
     try {
       const res = await fetch('/api/short-leave/approve', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({ shortLeaveId, status }),
       })
+      
+      if (res.status === 401) {
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+        return
+      }
+
       if (res.ok) {
         setShortLeaves((prev) => prev.map((sl) => (sl.id === shortLeaveId ? { ...sl, status } : sl)))
-        const statsRes = await fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token()}` } })
+        const statsRes = await fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${authToken}` } })
         if (statsRes.ok) setStats(await statsRes.json())
       }
     } finally {
@@ -144,11 +189,17 @@ export default function AdminDashboard() {
   const handleMarkAttendance = async () => {
     if (!selectedEmployee) return
 
+    const authToken = token()
+    if (!authToken) {
+      window.location.href = '/login'
+      return
+    }
+
     setMarking(true)
     try {
       const res = await fetch('/api/admin/mark-attendance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({
           employeeId: selectedEmployee.id,
           date: selectedEmployee.date,
@@ -156,6 +207,13 @@ export default function AdminDashboard() {
           reason: markReason || undefined,
         }),
       })
+
+      if (res.status === 401) {
+        localStorage.removeItem('authToken')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+        return
+      }
 
       if (res.ok) {
         setShowMarkModal(false)
